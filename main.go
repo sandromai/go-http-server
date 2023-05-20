@@ -7,35 +7,12 @@ import (
 )
 
 func main() {
-	adminModel := models.Admin{}
+	adminModel := &models.Admin{}
 
-	err := adminModel.Update(
-		"New test",
-		"test",
-		"1234",
-		2,
-	)
+	admin, err := adminModel.Authenticate("john", "123")
 
 	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Printf("Admin #%v updated.\n", 2)
-
-	adminId, err := adminModel.Authenticate("test", "1234")
-
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-
-	fmt.Printf("Admin #%v authenticated.\n", adminId)
-
-	admin, err := adminModel.FindById(adminId)
-
-	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Printf("(%v) %v\n", err.StatusCode, err.Message)
 		return
 	}
 
