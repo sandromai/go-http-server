@@ -2,7 +2,6 @@ package models
 
 import (
 	"database/sql"
-	"errors"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -11,14 +10,14 @@ import (
 
 type Admin struct{}
 
-func (Admin) checkUsernameAvailability(
+func (*Admin) checkUsernameAvailability(
 	username string,
 	excludeId int64,
-) (bool, error) {
-	dbConnection, err := getDBConnection()
+) (bool, *types.AppError) {
+	dbConnection, appErr := getDBInstance()
 
-	if err != nil {
-		return false, err
+	if appErr != nil {
+		return false, appErr
 	}
 
 	defer dbConnection.Close()
@@ -28,7 +27,10 @@ func (Admin) checkUsernameAvailability(
 	)
 
 	if err != nil {
-		return false, err
+		return false, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to check username availability.",
+		}
 	}
 
 	defer statement.Close()
@@ -47,19 +49,22 @@ func (Admin) checkUsernameAvailability(
 	}
 
 	if err != nil {
-		return false, err
+		return false, &types.AppError{
+			StatusCode: 500,
+			Message:    "Error checking username availability.",
+		}
 	}
 
 	return false, nil
 }
 
-func (Admin) FindById(
+func (*Admin) FindById(
 	id int64,
-) (*types.Admin, error) {
-	dbConnection, err := getDBConnection()
+) (*types.Admin, *types.AppError) {
+	dbConnection, appErr := getDBInstance()
 
-	if err != nil {
-		return nil, err
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	defer dbConnection.Close()
@@ -69,7 +74,10 @@ func (Admin) FindById(
 	)
 
 	if err != nil {
-		return nil, err
+		return nil, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to find admin.",
+		}
 	}
 
 	defer statement.Close()
@@ -83,35 +91,48 @@ func (Admin) FindById(
 		&admin.CreatedAt,
 	)
 
+	if err == sql.ErrNoRows {
+		return nil, &types.AppError{
+			StatusCode: 404,
+			Message:    "Admin not found.",
+		}
+	}
+
 	if err != nil {
-		return nil, err
+		return nil, &types.AppError{
+			StatusCode: 500,
+			Message:    "Error searching for admin.",
+		}
 	}
 
 	return &admin, nil
 }
 
-func (admin Admin) Create(
+func (admin *Admin) Create(
 	name,
 	username,
 	password string,
-) (int64, error) {
-	usernameIsAvailable, err := admin.checkUsernameAvailability(
+) (int64, *types.AppError) {
+	usernameIsAvailable, appErr := admin.checkUsernameAvailability(
 		username,
 		0,
 	)
 
-	if err != nil {
-		return 0, err
+	if appErr != nil {
+		return 0, appErr
 	}
 
 	if !usernameIsAvailable {
-		return 0, errors.New("username already registered")
+		return 0, &types.AppError{
+			StatusCode: 500,
+			Message:    "Username already registered.",
+		}
 	}
 
-	dbConnection, err := getDBConnection()
+	dbConnection, appErr := getDBInstance()
 
-	if err != nil {
-		return 0, err
+	if appErr != nil {
+		return 0, appErr
 	}
 
 	defer dbConnection.Close()
@@ -121,7 +142,10 @@ func (admin Admin) Create(
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to create admin.",
+		}
 	}
 
 	defer statement.Close()
@@ -132,7 +156,10 @@ func (admin Admin) Create(
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to hash password.",
+		}
 	}
 
 	encryptedPassword := string(passwordBytes)
@@ -144,44 +171,45 @@ func (admin Admin) Create(
 	)
 
 	if err != nil {
-		return 0, err
+		return 0, &types.AppError{
+			StatusCode: 500,
+			Message:    "Error creating admin.",
+		}
 	}
 
 	adminId, err := result.LastInsertId()
 
 	if err != nil {
-		return 0, err
+		return 0, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to get admin id.",
+		}
 	}
 
 	return adminId, nil
 }
 
-func (admin Admin) Update(
+func (admin *Admin) Update(
 	name,
 	username,
 	password string,
 	id int64,
-) error {
-	usernameIsAvailable, err := admin.checkUsernameAvailability(
+) *types.AppError {
+	usernameIsAvailable, appErr := admin.checkUsernameAvailability(
 		username,
 		id,
 	)
 
-	if err != nil {
-		return err
+	if appErr != nil {
+		return appErr
 	}
 
 	if !usernameIsAvailable {
-		return errors.New("username already registered")
+		return &types.AppError{
+			StatusCode: 500,
+			Message:    "Username already registered.",
+		}
 	}
-
-	dbConnection, err := getDBConnection()
-
-	if err != nil {
-		return err
-	}
-
-	defer dbConnection.Close()
 
 	query := "UPDATE `admins` SET `name` = ?, `username` = ?"
 
@@ -191,10 +219,21 @@ func (admin Admin) Update(
 
 	query += " WHERE `id` = ?"
 
+	dbConnection, appErr := getDBInstance()
+
+	if appErr != nil {
+		return appErr
+	}
+
+	defer dbConnection.Close()
+
 	statement, err := dbConnection.Prepare(query)
 
 	if err != nil {
-		return err
+		return &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to update admin.",
+		}
 	}
 
 	defer statement.Close()
@@ -208,7 +247,10 @@ func (admin Admin) Update(
 		)
 
 		if err != nil {
-			return err
+			return &types.AppError{
+				StatusCode: 500,
+				Message:    "Failed to hash password.",
+			}
 		}
 
 		encryptedPassword := string(passwordBytes)
@@ -228,58 +270,79 @@ func (admin Admin) Update(
 	}
 
 	if err != nil {
-		return err
+		return &types.AppError{
+			StatusCode: 500,
+			Message:    "Error updating admin.",
+		}
 	}
 
 	rowsAffected, err := result.RowsAffected()
 
 	if err != nil {
-		return err
+		return &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to check admin update.",
+		}
 	}
 
 	if rowsAffected == 0 {
-		return errors.New("admin not found")
+		return &types.AppError{
+			StatusCode: 404,
+			Message:    "Admin not found.",
+		}
 	}
 
 	return nil
 }
 
-func (Admin) Authenticate(
+func (*Admin) Authenticate(
 	username,
 	password string,
-) (int64, error) {
-	dbConnection, err := getDBConnection()
+) (*types.Admin, *types.AppError) {
+	dbConnection, appErr := getDBInstance()
 
-	if err != nil {
-		return 0, err
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
-		"SELECT `id`, `password` FROM `admins` WHERE `username` = ? LIMIT 1",
+		"SELECT `id`, `name`, `username`, `password`, `created_at` FROM `admins` WHERE `username` = ? LIMIT 1",
 	)
 
 	if err != nil {
-		return 0, err
+		return nil, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to authenticate admin.",
+		}
 	}
 
 	defer statement.Close()
 
-	var adminId int64
+	var admin types.Admin
 	var adminPassword string
 
 	err = statement.QueryRow(username).Scan(
-		&adminId,
+		&admin.Id,
+		&admin.Name,
+		&admin.Username,
 		&adminPassword,
+		&admin.CreatedAt,
 	)
 
 	if err == sql.ErrNoRows {
-		return 0, errors.New("incorrect username or password")
+		return nil, &types.AppError{
+			StatusCode: 401,
+			Message:    "Incorrect username or password.",
+		}
 	}
 
 	if err != nil {
-		return 0, err
+		return nil, &types.AppError{
+			StatusCode: 500,
+			Message:    "Error authenticating admin.",
+		}
 	}
 
 	err = bcrypt.CompareHashAndPassword(
@@ -288,8 +351,11 @@ func (Admin) Authenticate(
 	)
 
 	if err != nil {
-		return 0, errors.New("incorrect username or password")
+		return nil, &types.AppError{
+			StatusCode: 401,
+			Message:    "Incorrect username or password.",
+		}
 	}
 
-	return adminId, nil
+	return &admin, nil
 }
