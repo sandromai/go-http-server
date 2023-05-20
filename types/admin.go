@@ -1,7 +1,7 @@
 package types
 
 type Admin struct {
-	Id        int
+	Id        int64
 	Name      string
 	Username  string
 	CreatedAt string
