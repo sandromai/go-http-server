@@ -45,10 +45,7 @@ func (log *Logger) formatMessage(
 	}
 
 	formattedMessage += spacesRegExp.ReplaceAllString(cleanMessage, " ")
-
-	if !strings.HasSuffix(formattedMessage, "\n") {
-		formattedMessage += "\n"
-	}
+	formattedMessage = strings.TrimSpace(formattedMessage) + "\n"
 
 	return formattedMessage, nil
 }
@@ -61,7 +58,7 @@ func (log *Logger) createFile() (
 	fileExists := true
 
 	for i := 0; i < 20 && fileExists; i++ {
-		newFileName = fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%v", time.Now().UnixNano())+log.FileName))) + "-" + fmt.Sprintf("%v", time.Now().Unix()) + "-" + log.FileName
+		newFileName = fmt.Sprintf("%v", time.Now().Unix()) + "-" + fmt.Sprintf("%x", md5.Sum([]byte(fmt.Sprintf("%v", time.Now().UnixNano())+log.FileName))) + "-" + log.FileName
 
 		if _, err := os.Stat(filepath.Join(log.FolderPath, newFileName)); err != nil && os.IsNotExist(err) {
 			fileExists = false
@@ -96,16 +93,40 @@ func (log *Logger) getCurrentFilePath() (
 	folderInfo, err := os.Stat(log.FolderPath)
 
 	if err != nil {
-		return "", &types.AppError{
-			StatusCode: 500,
-			Message:    "Failed to get log folder data.",
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(log.FolderPath, 0755)
+
+			if err != nil {
+				return "", &types.AppError{
+					StatusCode: 500,
+					Message:    "Failed to create log folder.",
+				}
+			}
+
+			folderInfo, err = os.Stat(log.FolderPath)
+
+			if err != nil {
+				return "", &types.AppError{
+					StatusCode: 500,
+					Message:    "Failed to get log folder data.",
+				}
+			}
+		} else {
+			return "", &types.AppError{
+				StatusCode: 500,
+				Message:    "Failed to get log folder data.",
+			}
 		}
 	}
 
 	if !folderInfo.IsDir() {
-		return "", &types.AppError{
-			StatusCode: 500,
-			Message:    "Invalid log folder.",
+		err = os.MkdirAll(log.FolderPath, 0755)
+
+		if err != nil {
+			return "", &types.AppError{
+				StatusCode: 500,
+				Message:    "Failed to create log folder.",
+			}
 		}
 	}
 
@@ -168,8 +189,8 @@ func (log *Logger) getCurrentFilePath() (
 
 		currentFileParts := strings.Split(currentFileName, "-")
 
-		if len(currentFileParts) >= 2 && !strings.Contains(currentFileParts[1], ".") {
-			currentFileCreationTime, err := strconv.Atoi(currentFileParts[1])
+		if len(currentFileParts) >= 2 && !strings.Contains(currentFileParts[0], ".") {
+			currentFileCreationTime, err := strconv.Atoi(currentFileParts[0])
 
 			if err != nil {
 				currentFileName, appErr = log.createFile()
