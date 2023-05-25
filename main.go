@@ -28,6 +28,8 @@ func main() {
 	})
 
 	http.HandleFunc("/routes/admins/login", routes.AdminLogin)
+	http.HandleFunc("/routes/admins/register", routes.AdminRegister)
+	http.HandleFunc("/routes/admins/update", routes.AdminUpdate)
 
 	err := http.ListenAndServe(":3333", nil)
 
