@@ -87,14 +87,14 @@ func (*JWT) Check(
 
 	if payloadData.CreatedAt > time.Now().Unix() {
 		return nil, &types.AppError{
-			StatusCode: 400,
+			StatusCode: 401,
 			Message:    "Invalid token date.",
 		}
 	}
 
 	if payloadData.ExpiresAt <= time.Now().Unix() {
 		return nil, &types.AppError{
-			StatusCode: 400,
+			StatusCode: 401,
 			Message:    "Expired token.",
 		}
 	}
@@ -112,7 +112,7 @@ func (*JWT) Check(
 
 	if encodedSignature != tokenParts[2] {
 		return nil, &types.AppError{
-			StatusCode: 500,
+			StatusCode: 401,
 			Message:    "Invalid token.",
 		}
 	}

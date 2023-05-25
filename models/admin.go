@@ -124,7 +124,7 @@ func (admin *Admin) Create(
 
 	if !usernameIsAvailable {
 		return 0, &types.AppError{
-			StatusCode: 500,
+			StatusCode: 409,
 			Message:    "Username already registered.",
 		}
 	}
@@ -206,7 +206,7 @@ func (admin *Admin) Update(
 
 	if !usernameIsAvailable {
 		return &types.AppError{
-			StatusCode: 500,
+			StatusCode: 409,
 			Message:    "Username already registered.",
 		}
 	}
@@ -238,8 +238,6 @@ func (admin *Admin) Update(
 
 	defer statement.Close()
 
-	var result sql.Result
-
 	if password != "" {
 		passwordBytes, err := bcrypt.GenerateFromPassword(
 			[]byte(password),
@@ -255,14 +253,14 @@ func (admin *Admin) Update(
 
 		encryptedPassword := string(passwordBytes)
 
-		result, err = statement.Exec(
+		_, err = statement.Exec(
 			name,
 			username,
 			encryptedPassword,
 			id,
 		)
 	} else {
-		result, err = statement.Exec(
+		_, err = statement.Exec(
 			name,
 			username,
 			id,
@@ -273,22 +271,6 @@ func (admin *Admin) Update(
 		return &types.AppError{
 			StatusCode: 500,
 			Message:    "Error updating admin.",
-		}
-	}
-
-	rowsAffected, err := result.RowsAffected()
-
-	if err != nil {
-		return &types.AppError{
-			StatusCode: 500,
-			Message:    "Failed to check admin update.",
-		}
-	}
-
-	if rowsAffected == 0 {
-		return &types.AppError{
-			StatusCode: 404,
-			Message:    "Admin not found.",
 		}
 	}
 
@@ -320,7 +302,7 @@ func (*Admin) Authenticate(
 
 	defer statement.Close()
 
-	var admin types.Admin
+	var admin *types.Admin
 	var adminPassword string
 
 	err = statement.QueryRow(username).Scan(
@@ -357,5 +339,5 @@ func (*Admin) Authenticate(
 		}
 	}
 
-	return &admin, nil
+	return admin, nil
 }
