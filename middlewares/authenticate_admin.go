@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/sandromai/go-http-server/models"
 	"github.com/sandromai/go-http-server/types"
 	"github.com/sandromai/go-http-server/utils"
 )
@@ -29,7 +30,15 @@ func AuthenticateAdmin(
 		}
 	}
 
-	admin, appErr := utils.AuthenticateAdmin(tokenParts[1])
+	adminTokenPayload, appErr := (&utils.JWT{}).Check(tokenParts[1])
+
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	admin, appErr := (&models.Admin{}).FindById(
+		adminTokenPayload.AdminId,
+	)
 
 	if appErr != nil {
 		return nil, appErr
