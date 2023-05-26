@@ -110,7 +110,9 @@ func AdminRegister(
 		return
 	}
 
-	if _, appErr := middlewares.AuthenticateAdmin(request); appErr != nil {
+	admin, appErr := middlewares.AuthenticateAdmin(request)
+
+	if appErr != nil {
 		utils.ReturnJSONResponse(
 			writer,
 			appErr.StatusCode,
@@ -189,6 +191,7 @@ func AdminRegister(
 		body.Name,
 		body.Username,
 		body.Password,
+		&admin.Id,
 	)
 
 	if appErr != nil {
@@ -201,7 +204,7 @@ func AdminRegister(
 		return
 	}
 
-	admin, appErr := adminModel.FindById(adminId)
+	createdAdmin, appErr := adminModel.FindById(adminId)
 
 	if appErr != nil {
 		utils.ReturnJSONResponse(
@@ -216,7 +219,7 @@ func AdminRegister(
 	utils.ReturnJSONResponse(
 		writer,
 		201,
-		admin,
+		createdAdmin,
 	)
 }
 

@@ -35,7 +35,7 @@ func (*Admin) checkUsernameAvailability(
 
 	defer statement.Close()
 
-	var adminId int64
+	adminId := int64(0)
 
 	err = statement.QueryRow(
 		username,
@@ -70,7 +70,7 @@ func (*Admin) FindById(
 	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
-		"SELECT `id`, `name`, `username`, `created_at` FROM `admins` WHERE `id` = ? LIMIT 1",
+		"SELECT `id`, `name`, `username`, `created_by`, `created_at` FROM `admins` WHERE `id` = ? LIMIT 1",
 	)
 
 	if err != nil {
@@ -82,12 +82,13 @@ func (*Admin) FindById(
 
 	defer statement.Close()
 
-	var admin types.Admin
+	admin := &types.Admin{}
 
 	err = statement.QueryRow(id).Scan(
 		&admin.Id,
 		&admin.Name,
 		&admin.Username,
+		&admin.CreatedBy,
 		&admin.CreatedAt,
 	)
 
@@ -105,13 +106,14 @@ func (*Admin) FindById(
 		}
 	}
 
-	return &admin, nil
+	return admin, nil
 }
 
 func (admin *Admin) Create(
 	name,
 	username,
 	password string,
+	createdBy *int64,
 ) (int64, *types.AppError) {
 	usernameIsAvailable, appErr := admin.checkUsernameAvailability(
 		username,
@@ -138,7 +140,7 @@ func (admin *Admin) Create(
 	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
-		"INSERT INTO `admins` (`name`, `username`, `password`) VALUES(?, ?, ?)",
+		"INSERT INTO `admins` (`name`, `username`, `password`, `created_by`) VALUES(?, ?, ?, ?)",
 	)
 
 	if err != nil {
@@ -290,7 +292,7 @@ func (*Admin) Authenticate(
 	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
-		"SELECT `id`, `name`, `username`, `password`, `created_at` FROM `admins` WHERE `username` = ? LIMIT 1",
+		"SELECT `id`, `name`, `username`, `password`, `created_by`, `created_at` FROM `admins` WHERE `username` = ? LIMIT 1",
 	)
 
 	if err != nil {
@@ -302,14 +304,15 @@ func (*Admin) Authenticate(
 
 	defer statement.Close()
 
-	var admin *types.Admin
-	var adminPassword string
+	admin := &types.Admin{}
+	adminPassword := ""
 
 	err = statement.QueryRow(username).Scan(
 		&admin.Id,
 		&admin.Name,
 		&admin.Username,
 		&adminPassword,
+		&admin.CreatedBy,
 		&admin.CreatedAt,
 	)
 
