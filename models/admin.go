@@ -20,8 +20,6 @@ func (*Admin) checkUsernameAvailability(
 		return false, appErr
 	}
 
-	defer dbConnection.Close()
-
 	statement, err := dbConnection.Prepare(
 		"SELECT `id` FROM `admins` WHERE `username` = ? AND `id` != ? LIMIT 1",
 	)
@@ -66,8 +64,6 @@ func (*Admin) FindById(
 	if appErr != nil {
 		return nil, appErr
 	}
-
-	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
 		"SELECT `id`, `name`, `username`, `created_by`, `created_at` FROM `admins` WHERE `id` = ? LIMIT 1",
@@ -136,8 +132,6 @@ func (admin *Admin) Create(
 	if appErr != nil {
 		return 0, appErr
 	}
-
-	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
 		"INSERT INTO `admins` (`name`, `username`, `password`, `created_by`) VALUES(?, ?, ?, ?)",
@@ -227,8 +221,6 @@ func (admin *Admin) Update(
 		return appErr
 	}
 
-	defer dbConnection.Close()
-
 	statement, err := dbConnection.Prepare(query)
 
 	if err != nil {
@@ -288,8 +280,6 @@ func (*Admin) Authenticate(
 	if appErr != nil {
 		return nil, appErr
 	}
-
-	defer dbConnection.Close()
 
 	statement, err := dbConnection.Prepare(
 		"SELECT `id`, `name`, `username`, `password`, `created_by`, `created_at` FROM `admins` WHERE `username` = ? LIMIT 1",
