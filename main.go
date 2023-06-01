@@ -44,7 +44,7 @@ func main() {
 			FolderPath:     filepath.Join(filepath.Dir(currentPath), "logs"),
 			FileName:       "main.log",
 			MessagesPrefix: "[MAIN]:",
-		}).Save(fmt.Sprintf("Server closed: %v\n", err.Error()))
+		}).Save(fmt.Sprintf("Server closed: %v", err.Error()))
 
 		if appErr != nil {
 			panic(appErr.Message)
