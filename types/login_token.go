@@ -1,7 +1,7 @@
 package types
 
 type LoginToken struct {
-	Id         int64  `json:"id"`
+	Id         string `json:"id"`
 	Email      string `json:"email"`
 	DeviceCode string `json:"deviceCode"`
 	IPAddress  string `json:"IPAddress"`

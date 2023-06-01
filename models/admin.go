@@ -6,13 +6,54 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/sandromai/go-http-server/types"
+	"github.com/sandromai/go-http-server/utils"
 )
 
 type Admin struct{}
 
+func (*Admin) checkIdAvailability(
+	id string,
+) (bool, *types.AppError) {
+	dbConnection, appErr := getDBInstance()
+
+	if appErr != nil {
+		return false, appErr
+	}
+
+	statement, err := dbConnection.Prepare(
+		"SELECT `id` FROM `admins` WHERE `id` = ? LIMIT 1",
+	)
+
+	if err != nil {
+		return false, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to check ID availability.",
+		}
+	}
+
+	defer statement.Close()
+
+	adminId := ""
+
+	err = statement.QueryRow(id).Scan(&adminId)
+
+	if err == sql.ErrNoRows {
+		return true, nil
+	}
+
+	if err != nil {
+		return false, &types.AppError{
+			StatusCode: 500,
+			Message:    "Error checking ID availability.",
+		}
+	}
+
+	return false, nil
+}
+
 func (*Admin) checkUsernameAvailability(
 	username string,
-	excludeId int64,
+	excludeId string,
 ) (bool, *types.AppError) {
 	dbConnection, appErr := getDBInstance()
 
@@ -33,7 +74,7 @@ func (*Admin) checkUsernameAvailability(
 
 	defer statement.Close()
 
-	adminId := int64(0)
+	adminId := ""
 
 	err = statement.QueryRow(
 		username,
@@ -56,8 +97,52 @@ func (*Admin) checkUsernameAvailability(
 	return false, nil
 }
 
+func (admin *Admin) generateId() (
+	string,
+	*types.AppError,
+) {
+	id, appErr := utils.GenerateUUIDv4()
+
+	if appErr != nil {
+		return "", appErr
+	}
+
+	idAvailability, appErr := admin.checkIdAvailability(
+		id,
+	)
+
+	if appErr != nil {
+		return "", appErr
+	}
+
+	for i := 0; i < 20 && !idAvailability; i++ {
+		id, appErr = utils.GenerateUUIDv4()
+
+		if appErr != nil {
+			return "", appErr
+		}
+
+		idAvailability, appErr = admin.checkIdAvailability(
+			id,
+		)
+
+		if appErr != nil {
+			return "", appErr
+		}
+	}
+
+	if !idAvailability {
+		return "", &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to generate ID.",
+		}
+	}
+
+	return id, nil
+}
+
 func (*Admin) FindById(
-	id int64,
+	id string,
 ) (*types.Admin, *types.AppError) {
 	dbConnection, appErr := getDBInstance()
 
@@ -109,19 +194,25 @@ func (admin *Admin) Create(
 	name,
 	username,
 	password string,
-	createdBy *int64,
-) (int64, *types.AppError) {
+	createdBy *string,
+) (string, *types.AppError) {
+	id, appErr := admin.generateId()
+
+	if appErr != nil {
+		return "", appErr
+	}
+
 	usernameIsAvailable, appErr := admin.checkUsernameAvailability(
 		username,
-		0,
+		"",
 	)
 
 	if appErr != nil {
-		return 0, appErr
+		return "", appErr
 	}
 
 	if !usernameIsAvailable {
-		return 0, &types.AppError{
+		return "", &types.AppError{
 			StatusCode: 409,
 			Message:    "Username already registered.",
 		}
@@ -130,15 +221,15 @@ func (admin *Admin) Create(
 	dbConnection, appErr := getDBInstance()
 
 	if appErr != nil {
-		return 0, appErr
+		return "", appErr
 	}
 
 	statement, err := dbConnection.Prepare(
-		"INSERT INTO `admins` (`name`, `username`, `password`, `created_by`) VALUES(?, ?, ?, ?)",
+		"INSERT INTO `admins` (`id`, `name`, `username`, `password`, `created_by`) VALUES(?, ?, ?, ?, ?)",
 	)
 
 	if err != nil {
-		return 0, &types.AppError{
+		return "", &types.AppError{
 			StatusCode: 500,
 			Message:    "Failed to create admin.",
 		}
@@ -152,7 +243,7 @@ func (admin *Admin) Create(
 	)
 
 	if err != nil {
-		return 0, &types.AppError{
+		return "", &types.AppError{
 			StatusCode: 500,
 			Message:    "Failed to hash password.",
 		}
@@ -160,36 +251,29 @@ func (admin *Admin) Create(
 
 	encryptedPassword := string(passwordBytes)
 
-	result, err := statement.Exec(
+	_, err = statement.Exec(
+		id,
 		name,
 		username,
 		encryptedPassword,
+		createdBy,
 	)
 
 	if err != nil {
-		return 0, &types.AppError{
+		return "", &types.AppError{
 			StatusCode: 500,
 			Message:    "Error creating admin.",
 		}
 	}
 
-	adminId, err := result.LastInsertId()
-
-	if err != nil {
-		return 0, &types.AppError{
-			StatusCode: 500,
-			Message:    "Failed to get admin id.",
-		}
-	}
-
-	return adminId, nil
+	return id, nil
 }
 
 func (admin *Admin) Update(
 	name,
 	username,
-	password string,
-	id int64,
+	password,
+	id string,
 ) *types.AppError {
 	usernameIsAvailable, appErr := admin.checkUsernameAvailability(
 		username,

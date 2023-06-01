@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS `login_tokens`;
 
 CREATE TABLE `login_tokens` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `device_code` varchar(255) NOT NULL,
   `ip_address` varchar(255) NOT NULL,
