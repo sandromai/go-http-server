@@ -195,8 +195,11 @@ func (admin *Admin) Create(
 	username,
 	password string,
 	createdBy *string,
-) (string, *types.AppError) {
-	id, appErr := admin.generateId()
+) (
+	id string,
+	appErr *types.AppError,
+) {
+	id, appErr = admin.generateId()
 
 	if appErr != nil {
 		return "", appErr
