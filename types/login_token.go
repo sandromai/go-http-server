@@ -3,7 +3,6 @@ package types
 type LoginToken struct {
 	Id         string `json:"id"`
 	Email      string `json:"email"`
-	DeviceCode string `json:"deviceCode"`
 	IPAddress  string `json:"IPAddress"`
 	Device     string `json:"device"`
 	Authorized bool   `json:"authorized"`
