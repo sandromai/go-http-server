@@ -23,8 +23,9 @@ func AdminLogin(
 	}
 
 	var body *struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
+		Username   string `json:"username"`
+		Password   string `json:"password"`
+		RememberMe bool   `json:"rememberMe"`
 	}
 
 	err := json.NewDecoder(request.Body).Decode(&body)
@@ -74,10 +75,20 @@ func AdminLogin(
 		return
 	}
 
+	var expiredAt int64
+
+	createdAt := time.Now().Unix()
+
+	if body.RememberMe {
+		expiredAt = time.Now().Add(time.Hour * 24 * 30).Unix()
+	} else {
+		expiredAt = time.Now().Add(time.Hour * 24 * 7).Unix()
+	}
+
 	adminToken, appErr := (&utils.JWT{}).Create(&types.AdminTokenPayload{
 		AdminId:   admin.Id,
-		ExpiresAt: time.Now().Add(time.Hour * 24 * 7).Unix(),
-		CreatedAt: time.Now().Unix(),
+		ExpiresAt: expiredAt,
+		CreatedAt: createdAt,
 	})
 
 	if appErr != nil {
