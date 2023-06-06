@@ -39,7 +39,9 @@ func AdminLogin(
 	}
 
 	if err != nil {
-		utils.ReturnJSONResponse(writer, 500, nil)
+		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
+			Error: "Invalid data.",
+		})
 
 		return
 	}
@@ -151,7 +153,9 @@ func AdminRegister(
 	}
 
 	if err != nil {
-		utils.ReturnJSONResponse(writer, 500, nil)
+		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
+			Error: "Invalid data.",
+		})
 
 		return
 	}
@@ -274,7 +278,9 @@ func AdminUpdate(
 	}
 
 	if err != nil {
-		utils.ReturnJSONResponse(writer, 500, nil)
+		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
+			Error: "Invalid data.",
+		})
 
 		return
 	}
