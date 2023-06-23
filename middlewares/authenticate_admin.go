@@ -30,7 +30,7 @@ func AuthenticateAdmin(
 		}
 	}
 
-	adminTokenPayload, appErr := (&utils.JWT{}).Check(tokenParts[1])
+	adminTokenPayload, appErr := (&utils.JWT{}).CheckAdmin(tokenParts[1])
 
 	if appErr != nil {
 		return nil, appErr
