@@ -7,7 +7,7 @@ CREATE TABLE `user_tokens` (
   `from_user_token` int UNSIGNED NULL,
   `ip_address` varchar(255) NOT NULL,
   `device` varchar(255) NOT NULL,
-  `disconnected` tinyint(1) UNSIGNED NOT NULL DEFAULT 0,
+  `disconnected` boolean NOT NULL DEFAULT false,
   `last_activity` datetime NOT NULL DEFAULT current_timestamp(),
   `expires_at` datetime NOT NULL DEFAULT current_timestamp(),
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
