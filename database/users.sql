@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS `users`;
 
 CREATE TABLE `users` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
+  `id` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `banned` boolean NOT NULL DEFAULT false,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),

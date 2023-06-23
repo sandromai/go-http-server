@@ -1,10 +1,10 @@
 DROP TABLE IF EXISTS `user_tokens`;
 
 CREATE TABLE `user_tokens` (
-  `id` int UNSIGNED NOT NULL AUTO_INCREMENT,
-  `user_id` int UNSIGNED NOT NULL,
-  `from_login_token` int UNSIGNED NULL,
-  `from_user_token` int UNSIGNED NULL,
+  `id` varchar(255) NOT NULL,
+  `user_id` varchar(255) NOT NULL,
+  `from_login_token` varchar(255) NULL,
+  `from_user_token` varchar(255) NULL,
   `ip_address` varchar(255) NOT NULL,
   `device` varchar(255) NOT NULL,
   `disconnected` boolean NOT NULL DEFAULT false,
