@@ -79,8 +79,6 @@ func AdminLogin(
 
 	var expiredAt int64
 
-	createdAt := time.Now().Unix()
-
 	if body.RememberMe {
 		expiredAt = time.Now().Add(time.Hour * 24 * 30).Unix()
 	} else {
@@ -90,7 +88,7 @@ func AdminLogin(
 	adminToken, appErr := (&utils.JWT{}).Create(&types.AdminTokenPayload{
 		AdminId:   admin.Id,
 		ExpiresAt: expiredAt,
-		CreatedAt: createdAt,
+		CreatedAt: time.Now().Unix(),
 	})
 
 	if appErr != nil {
