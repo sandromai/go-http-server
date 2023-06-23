@@ -31,6 +31,8 @@ func main() {
 	http.HandleFunc("/routes/admins/register", routes.AdminRegister)
 	http.HandleFunc("/routes/admins/update", routes.AdminUpdate)
 
+	http.HandleFunc("/routes/loginTokens/create", routes.LoginTokenCreate)
+
 	err := http.ListenAndServe(":3333", nil)
 
 	if err != nil {
