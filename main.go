@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,7 +11,12 @@ import (
 	"github.com/sandromai/go-http-server/utils"
 )
 
+//go:embed templates/emails/loginToken.min.html
+var loginTokenTemplate string
+
 func main() {
+	routes.LoginTokenTemplate = loginTokenTemplate
+
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/" {
 			writer.WriteHeader(404)
