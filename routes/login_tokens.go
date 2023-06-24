@@ -2,10 +2,8 @@ package routes
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -13,6 +11,8 @@ import (
 	"github.com/sandromai/go-http-server/types"
 	"github.com/sandromai/go-http-server/utils"
 )
+
+var LoginTokenTemplate string
 
 func LoginTokenCreate(
 	writer http.ResponseWriter,
@@ -46,7 +46,9 @@ func LoginTokenCreate(
 		return
 	}
 
-	if strings.TrimSpace(body.Email) == "" {
+	body.Email = strings.TrimSpace(body.Email)
+
+	if body.Email == "" {
 		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
 			Error: "Insert your email address.",
 		})
@@ -54,7 +56,7 @@ func LoginTokenCreate(
 		return
 	}
 
-	if matched, err := regexp.MatchString(`^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$`, strings.TrimSpace(body.Email)); !matched || err != nil {
+	if !utils.CheckEmail(body.Email) {
 		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
 			Error: "Invalid email address.",
 		})
@@ -65,23 +67,80 @@ func LoginTokenCreate(
 	user, _ := (&models.User{}).FindByEmail(body.Email)
 
 	if user != nil && user.Banned {
-		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
+		utils.ReturnJSONResponse(writer, 403, &types.ReturnError{
 			Error: "User banned.",
 		})
 
 		return
 	}
 
-	// check quantity of active login tokens
-	// check if last login token was created more than 1 minute ago
+	loginTokenModel := &models.LoginToken{}
+
+	activeTokens, appErr := loginTokenModel.CountActiveByEmail(
+		body.Email,
+	)
+
+	if appErr != nil {
+		utils.ReturnJSONResponse(
+			writer,
+			appErr.StatusCode,
+			&types.ReturnError{Error: appErr.Message},
+		)
+
+		return
+	}
+
+	if activeTokens >= 3 {
+		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
+			Error: "You've reached max active tokens, please wait to send new login tokens.",
+		})
+
+		return
+	}
+
+	lastTokenCreationTime, appErr := loginTokenModel.GetLastCreationTimeByEmail(
+		body.Email,
+	)
+
+	if appErr != nil {
+		utils.ReturnJSONResponse(
+			writer,
+			appErr.StatusCode,
+			&types.ReturnError{Error: appErr.Message},
+		)
+
+		return
+	}
+
+	if lastTokenCreationTime != "" {
+		lastTokenTime, err := time.Parse(time.DateTime, lastTokenCreationTime)
+
+		if err != nil {
+			utils.ReturnJSONResponse(writer, 500, &types.ReturnError{
+				Error: "Error parsing date.",
+			})
+
+			return
+		}
+
+		diff := time.Since(lastTokenTime)
+
+		if diff.Seconds() < 60 {
+			utils.ReturnJSONResponse(writer, 500, &types.ReturnError{
+				Error: "Wait at least one minute to try again.",
+			})
+
+			return
+		}
+	}
 
 	ipAddress := strings.Split(request.RemoteAddr, ":")[0]
 	platform, browser := utils.GetDeviceInfo(request.Header.Get("User-Agent"))
 	device := platform + ":" + browser
 	expiresIn := int64(10 * 60)
 
-	loginTokenId, appErr := (&models.LoginToken{}).Create(
-		strings.TrimSpace(body.Email),
+	loginTokenId, appErr := loginTokenModel.Create(
+		body.Email,
 		ipAddress,
 		device,
 		expiresIn,
@@ -115,9 +174,45 @@ func LoginTokenCreate(
 		return
 	}
 
-	// create link user loginToken
-	// send link to email
-	fmt.Println(loginToken)
+	emailSettings, appErr := (&models.EmailSetting{}).List()
+
+	if appErr != nil {
+		utils.ReturnJSONResponse(
+			writer,
+			appErr.StatusCode,
+			&types.ReturnError{Error: appErr.Message},
+		)
+
+		return
+	}
+
+	confirmAuthLink := "https://" + request.Host + "/auth/confirm?loginToken=" + loginToken
+
+	emailBody := utils.UseTemplate(LoginTokenTemplate, map[string]string{"ConfirmAuthLink": confirmAuthLink})
+
+	appErr = (&utils.Mailer{
+		Host:     emailSettings.Host,
+		Port:     emailSettings.Port,
+		Username: emailSettings.Username,
+		Password: emailSettings.Password,
+	}).Send(
+		"contact@company.com",
+		"Company",
+		body.Email,
+		"",
+		"Log in to Company Website",
+		emailBody,
+	)
+
+	if appErr != nil {
+		utils.ReturnJSONResponse(
+			writer,
+			appErr.StatusCode,
+			&types.ReturnError{Error: appErr.Message},
+		)
+
+		return
+	}
 
 	utils.ReturnJSONResponse(
 		writer,
