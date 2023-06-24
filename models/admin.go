@@ -340,18 +340,25 @@ func (admin *Admin) Update(
 			encryptedPassword,
 			id,
 		)
+
+		if err != nil {
+			return &types.AppError{
+				StatusCode: 500,
+				Message:    "Error updating admin.",
+			}
+		}
 	} else {
 		_, err = statement.Exec(
 			name,
 			username,
 			id,
 		)
-	}
 
-	if err != nil {
-		return &types.AppError{
-			StatusCode: 500,
-			Message:    "Error updating admin.",
+		if err != nil {
+			return &types.AppError{
+				StatusCode: 500,
+				Message:    "Error updating admin.",
+			}
 		}
 	}
 
