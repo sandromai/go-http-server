@@ -38,5 +38,5 @@ func GetDeviceInfo(
 		}
 	}
 
-	return
+	return platform, browser
 }
