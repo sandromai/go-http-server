@@ -2,20 +2,21 @@ package main
 
 import (
 	_ "embed"
-	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
+	"time"
 
 	"github.com/sandromai/go-http-server/routes"
-	"github.com/sandromai/go-http-server/utils"
 )
 
 //go:embed templates/emails/loginToken.min.html
 var loginTokenTemplate string
 
 func main() {
-	routes.LoginTokenTemplate = loginTokenTemplate
+	timezone, err := time.LoadLocation("America/Sao_Paulo")
+
+	if err != nil {
+		panic(err)
+	}
 
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		if request.URL.Path != "/" {
@@ -33,32 +34,44 @@ func main() {
 		writer.Write([]byte("<h1>Hello world!</h1>"))
 	})
 
-	http.HandleFunc("/routes/admins/login", routes.AdminLogin)
-	http.HandleFunc("/routes/admins/register", routes.AdminRegister)
-	http.HandleFunc("/routes/admins/update", routes.AdminUpdate)
+	adminRoutes := &routes.Admin{}
 
-	http.HandleFunc("/routes/emailSettings/update", routes.EmailSettingsUpdate)
-	http.HandleFunc("/routes/emailSettings/list", routes.EmailSettingsList)
+	http.HandleFunc("/routes/admins/login", adminRoutes.Login)
+	http.HandleFunc("/routes/admins/register", adminRoutes.Register)
+	http.HandleFunc("/routes/admins/update", adminRoutes.Update)
 
-	http.HandleFunc("/routes/loginTokens/create", routes.LoginTokenCreate)
+	emailSettingRoutes := &routes.EmailSetting{}
 
-	err := http.ListenAndServe(":3333", nil)
+	http.HandleFunc("/routes/emailSettings/list", emailSettingRoutes.List)
+	http.HandleFunc("/routes/emailSettings/update", emailSettingRoutes.Update)
+
+	loginTokenRoutes := &routes.LoginToken{
+		Template: loginTokenTemplate,
+		Timezone: timezone,
+	}
+
+	http.HandleFunc("/routes/loginTokens/create", loginTokenRoutes.Create)
+	http.HandleFunc("/routes/loginTokens/check", loginTokenRoutes.Check)
+	http.HandleFunc("/routes/loginTokens/deny", loginTokenRoutes.Deny)
+	http.HandleFunc("/routes/loginTokens/authorize", loginTokenRoutes.Authorize)
+
+	userRoutes := &routes.User{
+		Timezone: timezone,
+	}
+
+	http.HandleFunc("/routes/users/authenticate", userRoutes.Authenticate)
+	http.HandleFunc("/routes/users/ban/", userRoutes.Ban)
+	http.HandleFunc("/routes/users/unban/", userRoutes.Unban)
+
+	userTokenRoutes := &routes.UserToken{
+		Timezone: timezone,
+	}
+
+	http.HandleFunc("/routes/userTokens/disconnect/", userTokenRoutes.Disconnect)
+
+	err = http.ListenAndServe(":3333", nil)
 
 	if err != nil {
-		currentPath, err := os.Executable()
-
-		if err != nil {
-			panic(err)
-		}
-
-		appErr := (&utils.Logger{
-			FolderPath:     filepath.Join(filepath.Dir(currentPath), "logs"),
-			FileName:       "main.log",
-			MessagesPrefix: "[MAIN]:",
-		}).Save(fmt.Sprintf("Server closed: %v", err.Error()))
-
-		if appErr != nil {
-			panic(appErr.Message)
-		}
+		panic(err)
 	}
 }
