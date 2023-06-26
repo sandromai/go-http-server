@@ -11,7 +11,9 @@ import (
 	"github.com/sandromai/go-http-server/utils"
 )
 
-func EmailSettingsList(
+type EmailSetting struct{}
+
+func (*EmailSetting) List(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -52,7 +54,7 @@ func EmailSettingsList(
 	)
 }
 
-func EmailSettingsUpdate(
+func (*EmailSetting) Update(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -85,7 +87,7 @@ func EmailSettingsUpdate(
 
 	if err == io.EOF {
 		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
-			Error: "No data provided.",
+			Error: "Insert the host.",
 		})
 
 		return

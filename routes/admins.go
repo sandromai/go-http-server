@@ -12,7 +12,9 @@ import (
 	"github.com/sandromai/go-http-server/utils"
 )
 
-func AdminLogin(
+type Admin struct{}
+
+func (*Admin) Login(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -32,7 +34,7 @@ func AdminLogin(
 
 	if err == io.EOF {
 		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
-			Error: "No data provided.",
+			Error: "Insert your username.",
 		})
 
 		return
@@ -85,11 +87,11 @@ func AdminLogin(
 		expiredAt = time.Now().Add(time.Hour * 24 * 7).Unix()
 	}
 
-	adminToken, appErr := (&utils.JWT{}).Create(&types.AdminTokenPayload{
+	adminToken, appErr := (&types.AdminTokenPayload{
 		AdminId:   admin.Id,
 		ExpiresAt: expiredAt,
 		CreatedAt: time.Now().Unix(),
-	})
+	}).ToJWT()
 
 	if appErr != nil {
 		utils.ReturnJSONResponse(
@@ -111,7 +113,7 @@ func AdminLogin(
 	)
 }
 
-func AdminRegister(
+func (*Admin) Register(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -144,7 +146,7 @@ func AdminRegister(
 
 	if err == io.EOF {
 		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
-			Error: "No data provided.",
+			Error: "Insert the name.",
 		})
 
 		return
@@ -236,7 +238,7 @@ func AdminRegister(
 	)
 }
 
-func AdminUpdate(
+func (*Admin) Update(
 	writer http.ResponseWriter,
 	request *http.Request,
 ) {
@@ -269,7 +271,7 @@ func AdminUpdate(
 
 	if err == io.EOF {
 		utils.ReturnJSONResponse(writer, 400, &types.ReturnError{
-			Error: "No data provided.",
+			Error: "Insert the name.",
 		})
 
 		return
