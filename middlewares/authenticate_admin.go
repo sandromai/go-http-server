@@ -6,12 +6,14 @@ import (
 
 	"github.com/sandromai/go-http-server/models"
 	"github.com/sandromai/go-http-server/types"
-	"github.com/sandromai/go-http-server/utils"
 )
 
 func AuthenticateAdmin(
 	request *http.Request,
-) (*types.Admin, *types.AppError) {
+) (
+	*types.Admin,
+	*types.AppError,
+) {
 	authorizationHeader := request.Header.Get("Authorization")
 
 	if authorizationHeader == "" {
@@ -30,7 +32,9 @@ func AuthenticateAdmin(
 		}
 	}
 
-	adminTokenPayload, appErr := (&utils.JWT{}).CheckAdmin(tokenParts[1])
+	adminTokenPayload := &types.AdminTokenPayload{}
+
+	appErr := adminTokenPayload.FromJWT(tokenParts[1])
 
 	if appErr != nil {
 		return nil, appErr
