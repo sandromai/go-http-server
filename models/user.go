@@ -52,53 +52,6 @@ func (*User) checkIdAvailability(
 	return false, nil
 }
 
-func (*User) checkEmailAvailability(
-	email string,
-) (
-	bool,
-	*types.AppError,
-) {
-	dbConnection, appErr := getDBInstance()
-
-	if appErr != nil {
-		return false, appErr
-	}
-
-	statement, err := dbConnection.Prepare(
-		"SELECT `id` FROM `users` WHERE `email` = ? LIMIT 1",
-	)
-
-	if err != nil {
-		return false, &types.AppError{
-			StatusCode: 500,
-			Message:    "Failed to check email availability.",
-		}
-	}
-
-	defer statement.Close()
-
-	userId := ""
-
-	err = statement.QueryRow(
-		email,
-	).Scan(
-		&userId,
-	)
-
-	if err == sql.ErrNoRows {
-		return true, nil
-	}
-
-	if err != nil {
-		return false, &types.AppError{
-			StatusCode: 500,
-			Message:    "Error checking email availability.",
-		}
-	}
-
-	return false, nil
-}
-
 func (user *User) generateId() (
 	string,
 	*types.AppError,
@@ -257,7 +210,7 @@ func (user *User) Create(
 		return "", appErr
 	}
 
-	emailIsAvailable, appErr := user.checkEmailAvailability(
+	emailIsAvailable, appErr := user.CheckEmailAvailability(
 		email,
 	)
 
@@ -364,4 +317,51 @@ func (user *User) Unban(
 	}
 
 	return nil
+}
+
+func (*User) CheckEmailAvailability(
+	email string,
+) (
+	bool,
+	*types.AppError,
+) {
+	dbConnection, appErr := getDBInstance()
+
+	if appErr != nil {
+		return false, appErr
+	}
+
+	statement, err := dbConnection.Prepare(
+		"SELECT `id` FROM `users` WHERE `email` = ? LIMIT 1",
+	)
+
+	if err != nil {
+		return false, &types.AppError{
+			StatusCode: 500,
+			Message:    "Failed to check email availability.",
+		}
+	}
+
+	defer statement.Close()
+
+	userId := ""
+
+	err = statement.QueryRow(
+		email,
+	).Scan(
+		&userId,
+	)
+
+	if err == sql.ErrNoRows {
+		return true, nil
+	}
+
+	if err != nil {
+		return false, &types.AppError{
+			StatusCode: 500,
+			Message:    "Error checking email availability.",
+		}
+	}
+
+	return false, nil
 }
